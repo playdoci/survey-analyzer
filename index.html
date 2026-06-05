@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>설문결과 분석기</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0F1923;--ink2:#3A4A5C;--ink3:#7A8A9C;
+  --paper:#F7F5F0;--paper2:#EDEAE3;--paper3:#E0DDD5;
+  --accent:#1B4FD8;--accent2:#0D3BB8;--acl:#E8EEFB;
+  --red:#C93838;--rel:#FDEAEA;
+  --green:#1A7A4A;--gel:#E8F5EE;
+  --gold:#B07D2A;--gol:#FDF5E4;
+  --border:#D5D0C8;--shadow:rgba(15,25,35,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--paper);color:var(--ink);font-family:'Noto Sans KR',sans-serif;line-height:1.6}
+::selection{background:var(--accent);color:#fff}
+
+/* ── HEADER ── */
+.hdr{background:var(--ink);padding:20px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 20px rgba(0,0,0,.25)}
+.hdr-brand{display:flex;align-items:center;gap:12px}
+.hdr-icon{width:40px;height:40px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.hdr-title{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;letter-spacing:-.02em}
+.hdr-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;letter-spacing:.05em}
+.hdr-badge{font-size:10px;background:var(--accent);color:#fff;padding:3px 9px;border-radius:20px;font-weight:700;letter-spacing:.05em}
+
+.wrap{max-width:1100px;margin:0 auto;padding:24px 20px 60px}
+
+/* ── DROP ZONE ── */
+.drop-zone{border:2.5px dashed var(--border);border-radius:16px;padding:52px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--paper2);position:relative;margin-bottom:20px}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:var(--acl)}
+.drop-zone.drag{box-shadow:0 0 0 4px rgba(27,79,216,.15)}
+.drop-icon{font-size:48px;margin-bottom:14px;display:block;opacity:.4}
+.drop-title{font-size:17px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.drop-sub{font-size:13px;color:var(--ink3);margin-bottom:18px;line-height:1.7}
+.drop-btn{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.drop-btn:hover{background:var(--accent2)}
+#fileInput{display:none}
+.file-info{font-size:12px;color:var(--ink3);margin-top:10px}
+
+/* ── SECTION ── */
+.section{background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 12px var(--shadow)}
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--paper3);background:var(--paper2)}
+.sec-title{font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px;letter-spacing:-.01em}
+.sec-title .ic{font-size:16px}
+.sec-body{padding:16px 18px}
+
+/* ── STATS ROW ── */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+@media(min-width:600px){.stats{grid-template-columns:repeat(4,1fr)}}
+.stat{border-radius:11px;padding:13px 15px;border:1px solid}
+.stat.b{background:var(--acl);border-color:#B5C8F5}.stat.g{background:var(--gel);border-color:#A0D4B8}.stat.r{background:var(--rel);border-color:#F0AAAA}.stat.y{background:var(--gol);border-color:#DCC080}
+.stat-num{font-size:26px;font-weight:900;line-height:1;margin-bottom:3px}
+.stat-num.b{color:var(--accent)}.stat-num.g{color:var(--green)}.stat-num.r{color:var(--red)}.stat-num.y{color:var(--gold)}
+.stat-lbl{font-size:10px;font-weight:700;letter-spacing:.04em}
+.stat-lbl.b{color:#1B4FD8}.stat-lbl.g{color:var(--green)}.stat-lbl.r{color:var(--red)}.stat-lbl.y{color:var(--gold)}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-size:10px;font-weight:700;color:var(--ink2);text-align:left;padding:9px 11px;background:var(--paper2);border-bottom:1px solid var(--border);white-space:nowrap;letter-spacing:.04em}
+td{padding:9px 11px;border-bottom:1px solid var(--paper3);vertical-align:top;color:var(--ink)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--paper)}
+
+/* ── BADGE ── */
+.bdg{display:inline-flex;align-items:center;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;white-space:nowrap;border:1px solid transparent}
+.bdg.b{background:var(--acl);color:var(--accent);border-color:#B5C8F5}
+.bdg.g{background:var(--gel);color:var(--green);border-color:#A0D4B8}
+.bdg.r{background:var(--rel);color:var(--red);border-color:#F0AAAA}
+.bdg.y{background:var(--gol);color:var(--gold);border-color:#DCC080}
+.bdg.gray{background:var(--paper2);color:var(--ink3);border-color:var(--border)}
+
+/* ── CHART GRID ── */
+.chart-grid{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:700px){.chart-grid{grid-template-columns:1fr 1fr}}
+.chart-box{background:var(--paper);border-radius:11px;padding:14px;border:1px solid var(--border)}
+.chart-title{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:10px;letter-spacing:-.01em}
+.chart-canvas-wrap{position:relative;height:220px}
+
+/* ── SUMMARY ── */
+.summary-box{background:linear-gradient(135deg,var(--ink) 0%,#1B3A5C 100%);border-radius:14px;padding:22px;color:#fff;margin-bottom:16px}
+.summary-title{font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:14px;display:flex;align-items:center;gap:8px;letter-spacing:-.02em}
+.summary-list{list-style:none;display:flex;flex-direction:column;gap:10px}
+.summary-item{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.6;color:rgba(255,255,255,.88)}
+.summary-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.insight-box{background:rgba(255,255,255,.08);border-radius:10px;padding:12px 14px;margin-top:14px;border:1px solid rgba(255,255,255,.15)}
+.insight-label{font-size:10px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.5);margin-bottom:5px}
+.insight-text{font-size:13px;color:rgba(255,255,255,.9);line-height:1.7}
+
+/* ── BTN ── */
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn{height:34px;padding:0 16px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--ink);font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:'Noto Sans KR',sans-serif;font-weight:700;transition:all .12s}
+.btn:hover{background:var(--paper2)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent2)}.btn.primary:hover{background:var(--accent2)}
+.btn.danger{background:var(--rel);color:var(--red);border-color:#F0AAAA}.btn.danger:hover{background:#FAD5D5}
+.btn.ppt{background:#C93838;color:#fff;border-color:#A32D2D}.btn.ppt:hover{background:#A32D2D}
+
+/* ── FREQ TABLE ── */
+.freq-bar-wrap{display:flex;align-items:center;gap:8px}
+.freq-bar-bg{flex:1;height:8px;background:var(--paper3);border-radius:4px;overflow:hidden}
+.freq-bar{height:100%;background:var(--accent);border-radius:4px;transition:width .5s ease}
+.freq-pct{font-size:11px;font-weight:700;color:var(--accent);min-width:38px;text-align:right}
+
+/* ── PROGRESS ── */
+.prog{background:var(--paper2);border-radius:9px;padding:12px 14px;margin-bottom:14px;display:none}
+.prog-title{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.prog-bg{height:6px;background:var(--border);border-radius:6px;overflow:hidden}
+.prog-f{height:100%;background:var(--accent);border-radius:6px;transition:width .3s}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:32px 16px;color:var(--ink3)}
+.empty-ic{font-size:32px;display:block;margin-bottom:10px;opacity:.35}
+.empty-t{font-size:14px;font-weight:700;margin-bottom:5px;color:var(--ink2)}
+.empty-s{font-size:12px;line-height:1.7}
+
+/* ── TOOLTIP ── */
+.tip{font-size:10px;color:var(--ink3);margin-top:5px;line-height:1.6}
+
+/* COL TYPE LABELS */
+.col-type-badge{font-size:9px;background:var(--paper2);color:var(--ink3);border:1px solid var(--border);padding:1px 6px;border-radius:10px;margin-left:5px;font-weight:500;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-icon">📊</div>
+    <div>
+      <div class="hdr-title">설문결과 분석기</div>
+      <div class="hdr-sub">SURVEY RESULT ANALYZER · AI-POWERED</div>
+    </div>
+  </div>
+  <div class="hdr-badge">EXCEL UPLOAD</div>
+</div>
+
+<div class="wrap">
+
+  <!-- DROP ZONE -->
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById(&#39;fileInput&#39;).click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+    <span class="drop-icon">📂</span>
+    <div class="drop-title">엑셀 파일을 끌어다 놓거나 클릭해서 업로드</div>
+    <div class="drop-sub">
+      설문결과가 담긴 엑셀(.xlsx, .xls) 또는 CSV 파일을 올려주세요<br>
+      1행은 <strong>항목명(헤더)</strong>, 2행부터 <strong>응답 데이터</strong>가 있는 형식이면 됩니다
+    </div>
+    <label class="drop-btn" onclick="event.stopPropagation();document.getElementById(&#39;fileInput&#39;).click()">📁 파일 선택</label>
+    <div class="file-info" id="fileInfo">📎 총1,703명(오프1,287명,온416명).xlsx (252KB)</div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="onFileSelect(event)">
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="prog" id="prog" style="display: none;">
+    <div class="prog-title" id="progTitle">완료!</div>
+    <div class="prog-bg"><div class="prog-f" id="progF" style="width: 100%;"></div></div>
+  </div>
+
+  <!-- RESULT AREA -->
+  <div id="resultArea" style="display: block;">
+
+    <!-- 통계 카드 -->
+    <div class="stats" id="statsRow">
+    <div class="stat b"><div class="stat-num b">1703</div><div class="stat-lbl b">총 응답 수</div></div>
+    <div class="stat g"><div class="stat-num g">30</div><div class="stat-lbl g">설문 항목 수</div></div>
+    <div class="stat y"><div class="stat-num y">0</div><div class="stat-lbl y">수치형 항목</div></div>
+    <div class="stat r"><div class="stat-num r">20</div><div class="stat-lbl r">선택형 항목</div></div></div>
+
+    <!-- AI 요약 -->
+    <div class="summary-box" id="summaryBox">
+    <div class="summary-title">📝 분석 요약 리포트</div>
+    <ul class="summary-list">
+      <li class="summary-item"><div class="summary-num">1</div><span>"날짜" 항목의 응답률이 61%로 낮습니다. 해당 문항 검토를 권장합니다.</span></li><li class="summary-item"><div class="summary-num">2</div><span>"자녀연령대2" 항목의 응답률이 47%로 낮습니다. 해당 문항 검토를 권장합니다.</span></li><li class="summary-item"><div class="summary-num">3</div><span>"자녀연령대3" 항목의 응답률이 32%로 낮습니다. 해당 문항 검토를 권장합니다.</span></li><li class="summary-item"><div class="summary-num">4</div><span>"선택 이유2" 항목의 응답률이 45%로 낮습니다. 해당 문항 검토를 권장합니다.</span></li><li class="summary-item"><div class="summary-num">5</div><span>"선택 이유3" 항목의 응답률이 1%로 낮습니다. 해당 문항 검토를 권장합니다.</span></li><li class="summary-item"><div class="summary-num">6</div><span>"동반인2" 항목의 응답률이 6%로 낮습니다. 해당 문항 검토를 권장합니다.</span></li>
+    </ul>
+    </div>
+
+    <!-- 항목별 분석 -->
+    <div class="section">
+      <div class="sec-head">
+        <div class="sec-title"><span class="ic">📋</span> 항목별 상세 분석</div>
+        <div style="font-size:11px;color:var(--ink3)" id="colCount">30개 항목</div>
+      </div>
+      <div class="sec-body" id="colAnalysis"><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">날짜<span class="col-type-badge">텍스트</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg gray">텍스트</span>
+          <span style="font-size:11px;color:var(--red)">1045/1703명 응답 (61.36%)</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">평균 답변 길이: <strong>33자</strong></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)"</div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">이름<span class="col-type-badge">텍스트</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg gray">텍스트</span>
+          <span style="font-size:11px;color:var(--ink3)">1677/1703명 응답 (98.47%)</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">평균 답변 길이: <strong>3자</strong></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"변지민"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"김덕규"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">" "</div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">연락처<span class="col-type-badge">텍스트</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg gray">텍스트</span>
+          <span style="font-size:11px;color:var(--ink3)">1690/1703명 응답 (99.24%)</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">평균 답변 길이: <strong>12자</strong></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"010-3916-1229"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"010-8229-0257"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"010-9385-2543"</div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">성별<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">여자</span><span style="font-size:12px;color:var(--ink3)">976명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:57%"></div></div><div class="freq-pct">57.31%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">남자</span><span style="font-size:12px;color:var(--ink3)">719명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:42%"></div></div><div class="freq-pct">42.22%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">8명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:0%"></div></div><div class="freq-pct">0.47%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">연령대<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">40대</span><span style="font-size:12px;color:var(--ink3)">833명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:49%"></div></div><div class="freq-pct">48.91%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">30대</span><span style="font-size:12px;color:var(--ink3)">432명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:25%"></div></div><div class="freq-pct">25.37%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">10대</span><span style="font-size:12px;color:var(--ink3)">218명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:13%"></div></div><div class="freq-pct">12.80%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">50대</span><span style="font-size:12px;color:var(--ink3)">93명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:5%"></div></div><div class="freq-pct">5.46%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">60대이상</span><span style="font-size:12px;color:var(--ink3)">81명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:5%"></div></div><div class="freq-pct">4.76%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">20대</span><span style="font-size:12px;color:var(--ink3)">34명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:2%"></div></div><div class="freq-pct">2.00%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">자녀연령대1<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">초등저학년(1~3학년)</span><span style="font-size:12px;color:var(--ink3)">411명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:24%"></div></div><div class="freq-pct">24.13%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">5세~7세</span><span style="font-size:12px;color:var(--ink3)">376명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:22%"></div></div><div class="freq-pct">22.08%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">초등고학년(4~6학년)</span><span style="font-size:12px;color:var(--ink3)">213명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:13%"></div></div><div class="freq-pct">12.51%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">36개월미만</span><span style="font-size:12px;color:var(--ink3)">208명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:12%"></div></div><div class="freq-pct">12.21%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">없음</span><span style="font-size:12px;color:var(--ink3)">164명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:10%"></div></div><div class="freq-pct">9.63%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">36개월~4세</span><span style="font-size:12px;color:var(--ink3)">130명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:8%"></div></div><div class="freq-pct">7.63%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">자녀연령대2<span class="col-type-badge">텍스트</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg gray">텍스트</span>
+          <span style="font-size:11px;color:var(--red)">805/1703명 응답 (47.27%)</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">평균 답변 길이: <strong>5자</strong></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"없음"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"없음"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"없음"</div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">자녀연령대3<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--red)">548/1703명 응답 (32.18%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">없음</span><span style="font-size:12px;color:var(--ink3)">522명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:95%"></div></div><div class="freq-pct">95.26%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">초등고학년(4~6학년)</span><span style="font-size:12px;color:var(--ink3)">11명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:2%"></div></div><div class="freq-pct">2.01%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">고등학생</span><span style="font-size:12px;color:var(--ink3)">4명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:1%"></div></div><div class="freq-pct">0.73%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">초등저학년(1~3학년)</span><span style="font-size:12px;color:var(--ink3)">4명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:1%"></div></div><div class="freq-pct">0.73%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">중학생</span><span style="font-size:12px;color:var(--ink3)">4명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:1%"></div></div><div class="freq-pct">0.73%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">5세~7세</span><span style="font-size:12px;color:var(--ink3)">2명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:0%"></div></div><div class="freq-pct">0.36%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">자녀연령대<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">1703명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:100%"></div></div><div class="freq-pct">100.00%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">자녀수<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1539/1703명 응답 (90.37%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">1명</span><span style="font-size:12px;color:var(--ink3)">1137명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:74%"></div></div><div class="freq-pct">73.88%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">2명</span><span style="font-size:12px;color:var(--ink3)">376명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:24%"></div></div><div class="freq-pct">24.43%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">3명</span><span style="font-size:12px;color:var(--ink3)">26명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:2%"></div></div><div class="freq-pct">1.69%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">거주지역<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">인천</span><span style="font-size:12px;color:var(--ink3)">563명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:33%"></div></div><div class="freq-pct">33.06%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">(부천/고양 제외)경기도</span><span style="font-size:12px;color:var(--ink3)">341명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:20%"></div></div><div class="freq-pct">20.02%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">서울</span><span style="font-size:12px;color:var(--ink3)">320명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:19%"></div></div><div class="freq-pct">18.79%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">부천</span><span style="font-size:12px;color:var(--ink3)">274명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:16%"></div></div><div class="freq-pct">16.09%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">83명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:5%"></div></div><div class="freq-pct">4.87%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">고양</span><span style="font-size:12px;color:var(--ink3)">57명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:3%"></div></div><div class="freq-pct">3.35%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">개인정보<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">동의</span><span style="font-size:12px;color:var(--ink3)">1567명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:92%"></div></div><div class="freq-pct">92.01%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">동의안함</span><span style="font-size:12px;color:var(--ink3)">114명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:7%"></div></div><div class="freq-pct">6.69%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">22명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:1%"></div></div><div class="freq-pct">1.29%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">마케팅수신<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">동의</span><span style="font-size:12px;color:var(--ink3)">1312명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:77%"></div></div><div class="freq-pct">77.04%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">동의안함</span><span style="font-size:12px;color:var(--ink3)">292명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:17%"></div></div><div class="freq-pct">17.15%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">99명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:6%"></div></div><div class="freq-pct">5.81%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">회원여부<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1686/1703명 응답 (99.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">해당없음</span><span style="font-size:12px;color:var(--ink3)">1473명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:87%"></div></div><div class="freq-pct">87.37%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">회원</span><span style="font-size:12px;color:var(--ink3)">213명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:13%"></div></div><div class="freq-pct">12.63%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">1.방문 유형<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">해당없음</span><span style="font-size:12px;color:var(--ink3)">1473명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:86%"></div></div><div class="freq-pct">86.49%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">시즌권회원</span><span style="font-size:12px;color:var(--ink3)">136명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:8%"></div></div><div class="freq-pct">7.99%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">연간회원</span><span style="font-size:12px;color:var(--ink3)">66명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:4%"></div></div><div class="freq-pct">3.88%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">17명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:1%"></div></div><div class="freq-pct">1.00%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">골프회원</span><span style="font-size:12px;color:var(--ink3)">11명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:1%"></div></div><div class="freq-pct">0.65%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">2.방문 횟수<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">처음방문</span><span style="font-size:12px;color:var(--ink3)">543명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:32%"></div></div><div class="freq-pct">31.88%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">2회</span><span style="font-size:12px;color:var(--ink3)">459명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:27%"></div></div><div class="freq-pct">26.95%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">4회이상</span><span style="font-size:12px;color:var(--ink3)">459명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:27%"></div></div><div class="freq-pct">26.95%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">3회</span><span style="font-size:12px;color:var(--ink3)">238명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:14%"></div></div><div class="freq-pct">13.98%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">4명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:0%"></div></div><div class="freq-pct">0.23%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">3. 선택 이유<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">근접성</span><span style="font-size:12px;color:var(--ink3)">1188명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:70%"></div></div><div class="freq-pct">69.76%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">시설</span><span style="font-size:12px;color:var(--ink3)">281명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:17%"></div></div><div class="freq-pct">16.50%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">가격</span><span style="font-size:12px;color:var(--ink3)">95명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:6%"></div></div><div class="freq-pct">5.58%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">지인추천</span><span style="font-size:12px;color:var(--ink3)">80명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:5%"></div></div><div class="freq-pct">4.70%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">서비스</span><span style="font-size:12px;color:var(--ink3)">29명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:2%"></div></div><div class="freq-pct">1.70%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">기타</span><span style="font-size:12px;color:var(--ink3)">23명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:1%"></div></div><div class="freq-pct">1.35%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">선택 이유2<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--red)">768/1703명 응답 (45.10%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">시설</span><span style="font-size:12px;color:var(--ink3)">352명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:46%"></div></div><div class="freq-pct">45.83%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">가격</span><span style="font-size:12px;color:var(--ink3)">237명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:31%"></div></div><div class="freq-pct">30.86%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">서비스</span><span style="font-size:12px;color:var(--ink3)">112명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:15%"></div></div><div class="freq-pct">14.58%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">지인추천</span><span style="font-size:12px;color:var(--ink3)">57명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:7%"></div></div><div class="freq-pct">7.42%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">기타</span><span style="font-size:12px;color:var(--ink3)">10명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:1%"></div></div><div class="freq-pct">1.30%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">선택 이유3<span class="col-type-badge">텍스트</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg gray">텍스트</span>
+          <span style="font-size:11px;color:var(--red)">19/1703명 응답 (1.12%)</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">평균 답변 길이: <strong>4자</strong></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"물이깨끗해서"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"재미"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"재미있어서"</div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">4.동반인1<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">배우자/자녀</span><span style="font-size:12px;color:var(--ink3)">1319명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:77%"></div></div><div class="freq-pct">77.45%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">부모/형제</span><span style="font-size:12px;color:var(--ink3)">189명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:11%"></div></div><div class="freq-pct">11.10%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">친구/지인</span><span style="font-size:12px;color:var(--ink3)">144명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:8%"></div></div><div class="freq-pct">8.46%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">연인</span><span style="font-size:12px;color:var(--ink3)">24명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:1%"></div></div><div class="freq-pct">1.41%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">기타</span><span style="font-size:12px;color:var(--ink3)">20명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:1%"></div></div><div class="freq-pct">1.17%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">7명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:0%"></div></div><div class="freq-pct">0.41%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">동반인2<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--red)">94/1703명 응답 (5.52%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">부모/형제</span><span style="font-size:12px;color:var(--ink3)">47명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:50%"></div></div><div class="freq-pct">50.00%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">친구/지인</span><span style="font-size:12px;color:var(--ink3)">43명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:46%"></div></div><div class="freq-pct">45.74%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">연인</span><span style="font-size:12px;color:var(--ink3)">4명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:4%"></div></div><div class="freq-pct">4.26%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">동반인3<span class="col-type-badge">텍스트</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg gray">텍스트</span>
+          <span style="font-size:11px;color:var(--red)">10/1703명 응답 (0.59%)</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">평균 답변 길이: <strong>4자</strong></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"사위, 딸, 손주들"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"혼자"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"사촌"</div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">5.시설물 만족도<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">매우만족</span><span style="font-size:12px;color:var(--ink3)">740명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:43%"></div></div><div class="freq-pct">43.45%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">만족</span><span style="font-size:12px;color:var(--ink3)">474명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:28%"></div></div><div class="freq-pct">27.83%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">매우불만족</span><span style="font-size:12px;color:var(--ink3)">307명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:18%"></div></div><div class="freq-pct">18.03%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">보통</span><span style="font-size:12px;color:var(--ink3)">95명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:6%"></div></div><div class="freq-pct">5.58%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">불만족</span><span style="font-size:12px;color:var(--ink3)">83명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:5%"></div></div><div class="freq-pct">4.87%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">4명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:0%"></div></div><div class="freq-pct">0.23%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">이유<span class="col-type-badge">텍스트</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg gray">텍스트</span>
+          <span style="font-size:11px;color:var(--red)">29/1703명 응답 (1.70%)</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">평균 답변 길이: <strong>9자</strong></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"맛없음"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"공룡다리 없어서 아쉬움"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"맛, 음식양대비 가격등"</div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">6.서비스 만족도<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">매우만족</span><span style="font-size:12px;color:var(--ink3)">777명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:46%"></div></div><div class="freq-pct">45.63%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">만족</span><span style="font-size:12px;color:var(--ink3)">452명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:27%"></div></div><div class="freq-pct">26.54%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">매우불만족</span><span style="font-size:12px;color:var(--ink3)">317명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:19%"></div></div><div class="freq-pct">18.61%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">보통</span><span style="font-size:12px;color:var(--ink3)">93명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:5%"></div></div><div class="freq-pct">5.46%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">불만족</span><span style="font-size:12px;color:var(--ink3)">61명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:4%"></div></div><div class="freq-pct">3.58%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">3명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:0%"></div></div><div class="freq-pct">0.18%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">이유<span class="col-type-badge">텍스트</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg gray">텍스트</span>
+          <span style="font-size:11px;color:var(--red)">29/1703명 응답 (1.70%)</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">평균 답변 길이: <strong>9자</strong></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"맛없음"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"공룡다리 없어서 아쉬움"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"맛, 음식양대비 가격등"</div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">7.식음 만족도<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">매우만족</span><span style="font-size:12px;color:var(--ink3)">613명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:36%"></div></div><div class="freq-pct">36.00%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">만족</span><span style="font-size:12px;color:var(--ink3)">433명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:25%"></div></div><div class="freq-pct">25.43%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">보통</span><span style="font-size:12px;color:var(--ink3)">264명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:16%"></div></div><div class="freq-pct">15.50%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">매우불만족</span><span style="font-size:12px;color:var(--ink3)">262명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:15%"></div></div><div class="freq-pct">15.38%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">불만족</span><span style="font-size:12px;color:var(--ink3)">120명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:7%"></div></div><div class="freq-pct">7.05%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">11명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:1%"></div></div><div class="freq-pct">0.65%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">이유<span class="col-type-badge">텍스트</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg gray">텍스트</span>
+          <span style="font-size:11px;color:var(--red)">29/1703명 응답 (1.70%)</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">평균 답변 길이: <strong>9자</strong></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"맛없음"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"공룡다리 없어서 아쉬움"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"맛, 음식양대비 가격등"</div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">8.재방문<span class="col-type-badge">선택형</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg y">선택형</span>
+          <span style="font-size:11px;color:var(--ink3)">1703/1703명 응답 (100.00%)</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">있다</span><span style="font-size:12px;color:var(--ink3)">1670명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:98%"></div></div><div class="freq-pct">98.06%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">없다</span><span style="font-size:12px;color:var(--ink3)">26명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:2%"></div></div><div class="freq-pct">1.53%</div></div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">미입력</span><span style="font-size:12px;color:var(--ink3)">7명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:0%"></div></div><div class="freq-pct">0.41%</div></div></div></div>
+    </div><div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">건의사항<span class="col-type-badge">텍스트</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg gray">텍스트</span>
+          <span style="font-size:11px;color:var(--red)">309/1703명 응답 (18.14%)</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">평균 답변 길이: <strong>20자</strong></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"음료수 들고 온천탕에 들어가는 어린이 제지 부탁."</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"재밌다"</div><div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"재미있었다."</div></div>
+    </div></div>
+    </div>
+
+    <!-- 시각화 차트 -->
+    <div class="section">
+      <div class="sec-head">
+        <div class="sec-title"><span class="ic">📈</span> 주요 항목 시각화</div>
+      </div>
+      <div class="sec-body">
+        <div class="chart-grid" id="chartGrid"><div class="chart-box"><div class="chart-title">성별</div><div class="chart-canvas-wrap"><canvas id="chart_3" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">연령대</div><div class="chart-canvas-wrap"><canvas id="chart_4" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">자녀연령대1</div><div class="chart-canvas-wrap"><canvas id="chart_5" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">자녀연령대3</div><div class="chart-canvas-wrap"><canvas id="chart_7" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">자녀연령대</div><div class="chart-canvas-wrap"><canvas id="chart_8" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">자녀수</div><div class="chart-canvas-wrap"><canvas id="chart_9" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">거주지역</div><div class="chart-canvas-wrap"><canvas id="chart_10" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">개인정보</div><div class="chart-canvas-wrap"><canvas id="chart_11" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">마케팅수신</div><div class="chart-canvas-wrap"><canvas id="chart_12" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">회원여부</div><div class="chart-canvas-wrap"><canvas id="chart_13" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">1.방문 유형</div><div class="chart-canvas-wrap"><canvas id="chart_14" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">2.방문 횟수</div><div class="chart-canvas-wrap"><canvas id="chart_15" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">3. 선택 이유</div><div class="chart-canvas-wrap"><canvas id="chart_16" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">선택 이유2</div><div class="chart-canvas-wrap"><canvas id="chart_17" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">4.동반인1</div><div class="chart-canvas-wrap"><canvas id="chart_19" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">동반인2</div><div class="chart-canvas-wrap"><canvas id="chart_20" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">5.시설물 만족도</div><div class="chart-canvas-wrap"><canvas id="chart_22" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">6.서비스 만족도</div><div class="chart-canvas-wrap"><canvas id="chart_24" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">7.식음 만족도</div><div class="chart-canvas-wrap"><canvas id="chart_26" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div><div class="chart-box"><div class="chart-title">8.재방문</div><div class="chart-canvas-wrap"><canvas id="chart_28" width="474" height="220" style="display: block; box-sizing: border-box; height: 220px; width: 474px;"></canvas></div></div></div>
+      </div>
+    </div>
+
+    <!-- 전체 응답 데이터 -->
+    <div class="section">
+      <div class="sec-head">
+        <div class="sec-title"><span class="ic">📄</span> 전체 응답 데이터</div>
+        <div class="btn-row" style="margin:0;gap:6px">
+          <button class="btn primary" onclick="exportExcel()">⬇ 엑셀 다운로드</button>
+          <button class="btn primary" onclick="exportPPT()" style="background:#C93838;border-color:#A32D2D">📊 PPT 다운로드</button>
+          <button class="btn danger" onclick="resetAll()">🗑 초기화</button>
+        </div>
+      </div>
+      <div class="sec-body" style="padding:0">
+        <div class="tbl-wrap" id="rawTable"><table><thead><tr><th>날짜</th><th>이름</th><th>연락처</th><th>성별</th><th>연령대</th><th>자녀연령대1</th><th>자녀연령대2</th><th>자녀연령대3</th><th>자녀연령대</th><th>자녀수</th><th>거주지역</th><th>개인정보</th><th>마케팅수신</th><th>회원여부</th><th>1.방문 유형</th><th>2.방문 횟수</th><th>3. 선택 이유</th><th>선택 이유2</th><th>선택 이유3</th><th>4.동반인1</th><th>동반인2</th><th>동반인3</th><th>5.시설물 만족도</th><th>이유</th><th>6.서비스 만족도</th><th>이유</th><th>7.식음 만족도</th><th>이유</th><th>8.재방문</th><th>건의사항</th></tr></thead><tbody><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>변지민</td><td>010-3916-1229</td><td>남자</td><td>30대</td><td>초등고학년(4~6학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>미입력</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>시설</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김덕규</td><td>010-8229-0257</td><td>미입력</td><td>30대</td><td>초등저학년(1~3학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>지인추천</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td> </td><td>010-9385-2543</td><td>남자</td><td>30대</td><td>36개월미만</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의안함</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>시설</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김수한</td><td>010-5330-3508</td><td>남자</td><td>60대이상</td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>부천</td><td>동의</td><td>동의</td><td>회원</td><td>연간회원</td><td>4회이상</td><td>시설</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>보통</td><td></td><td>만족</td><td></td><td>미입력</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>백정열</td><td>010-8654-5217</td><td>남자</td><td>40대</td><td>초등고학년(4~6학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>3회</td><td>근접성</td><td>가격</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>채은영</td><td>010-2672-4243</td><td>여자</td><td>40대</td><td>36개월미만</td><td>5세~7세</td><td>없음</td><td>미입력</td><td>2명</td><td>인천</td><td>동의안함</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>근접성</td><td>가격</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김혜주</td><td>010-4087-8960</td><td>여자</td><td>30대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>미입력</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>3회</td><td>서비스</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이지혜</td><td>010-9931-1579</td><td>여자</td><td>40대</td><td>초등고학년(4~6학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>3회</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>보통</td><td></td><td>만족</td><td></td><td>불만족</td><td>맛없음</td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>한혜진</td><td>010-2644-0358</td><td>여자</td><td>30대</td><td>초등저학년(1~3학년)</td><td>초등고학년(4~6학년)</td><td>없음</td><td>미입력</td><td>2명</td><td>부천</td><td>동의</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td>시설</td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>황루아</td><td>010-6221-0218</td><td>남자</td><td>10대</td><td>초등저학년(1~3학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>동의</td><td>미입력</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>시설</td><td>서비스</td><td></td><td>부모/형제</td><td></td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>청고성</td><td>010-7799-0129</td><td>남자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이준희</td><td>010-8294-2898</td><td>남자</td><td>10대</td><td>초등고학년(4~6학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>3회</td><td>근접성</td><td></td><td></td><td>부모/형제</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김인</td><td>010-8834-5824</td><td>여자</td><td>30대</td><td>36개월~4세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>2회</td><td>가격</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td>음료수 들고 온천탕에 들어가는 어린이 제지 부탁.</td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이상목</td><td>010-4046-4514</td><td>남자</td><td>30대</td><td>36개월~4세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이우형</td><td>010-5045-6470</td><td>남자</td><td>30대</td><td>36개월미만</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>동의</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>서비스</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이우형</td><td>010-5045-6470</td><td>남자</td><td>30대</td><td>36개월미만</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울 </td><td>동의</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>서비스</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>노다윤</td><td>010-6551-1652</td><td>여자</td><td>10대</td><td>5세~7세</td><td>초등저학년(1~3학년)</td><td>없음</td><td>미입력</td><td>2명</td><td>충청도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>시설</td><td></td><td></td><td>부모/형제</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>박리누</td><td>010-5479-8264</td><td>남자</td><td>40대</td><td>36개월미만</td><td>5세~7세</td><td>없음</td><td>미입력</td><td>2명</td><td>부천</td><td>동의</td><td>동의</td><td>회원</td><td>연간회원</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이소미</td><td>010-5769-3009</td><td>여자</td><td>30대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>미입력</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>시설</td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>안준민</td><td>010-7574-0782</td><td>남자</td><td>30대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>미입력</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>가격</td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>도회식</td><td>010-9882-5787</td><td>남자</td><td>60대이상</td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>미입력</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>박창영</td><td>010-9404-2410</td><td>남자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>송혜경</td><td>010-4161-4410</td><td>여자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김선화</td><td>010-9701-1057</td><td>여자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>가격</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>천고당</td><td>010-7999-0129</td><td>남자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>장진혁</td><td>010-6378-5880</td><td>남자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김명진</td><td>010-9505-3379</td><td>여자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>천고당</td><td>010-7999-0129</td><td>남자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>전용민</td><td>010-8289-4143</td><td>남자</td><td>40대</td><td>초등고학년(4~6학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이지후</td><td>010-8201-5427</td><td>남자</td><td>10대</td><td>중학생</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>부천</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>근접성</td><td>가격</td><td></td><td>부모/형제</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>신해청</td><td>010-5059-6630</td><td>여자</td><td>30대</td><td>36개월~4세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>기타</td><td>동의</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김윤희</td><td>010-2695-6765</td><td>여자</td><td>30대</td><td>초등저학년(1~3학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>지인추천</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td></td><td>010-5265-8139</td><td>여자</td><td>60대이상</td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>부천</td><td>동의</td><td>동의</td><td>회원</td><td>연간회원</td><td>4회이상</td><td>시설</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이재원</td><td>010-9212-9622</td><td>남자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>가격</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이정연</td><td>010-3897-2898</td><td>여자</td><td>40대</td><td>초등저학년(1~3학년)</td><td>초등고학년(4~6학년)</td><td>없음</td><td>미입력</td><td>2명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sat Dec 12 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>변상현</td><td>010-7295-4811</td><td>남자</td><td>40대</td><td>초등고학년(4~6학년)</td><td></td><td>없음</td><td>미입력</td><td>1명</td><td>미입력</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>서비스</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>박문미</td><td>010-5278-6663</td><td>여자</td><td>50대</td><td>초등고학년(4~6학년)</td><td></td><td>없음 </td><td>미입력</td><td>1명</td><td>부천</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>지인추천</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>박미환</td><td></td><td>남자</td><td>50대</td><td>초등고학년(4~6학년)</td><td>중학생</td><td>없음</td><td>미입력</td><td>2명</td><td>미입력</td><td>동의</td><td>동의</td><td>회원</td><td>연간회원</td><td>4회이상</td><td>시설</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>보통</td><td></td><td>보통</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>최영옥</td><td>010-8279-6681</td><td>여자</td><td>60대이상</td><td>초등저학년(1~3학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>3회</td><td>시설</td><td></td><td></td><td>배우자/자녀</td><td>부모/형제</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>쵱대원</td><td>010-4167-6565</td><td>남자</td><td>30대</td><td>36개월미만</td><td>36개월~4세</td><td>없음</td><td>미입력</td><td>2명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>가격</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김애숙</td><td>010-7337-8700</td><td>여자</td><td>60대이상</td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>미입력</td><td>미입력</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이수미</td><td>010-4141-0994</td><td>여자</td><td>30대</td><td>미입력</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>시설</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김형민</td><td>010-2049-0209</td><td>남자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>시설</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>불만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>임한성</td><td>010-9674-4758</td><td>남자</td><td>30대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의안함</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>심재경</td><td>010-2065-1638</td><td>여자</td><td>50대</td><td>없음</td><td>없음</td><td>없음</td><td>미입력</td><td></td><td>인천</td><td>동의</td><td>동의</td><td>회원</td><td>연간회원</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>금아인</td><td>010-8256-0085</td><td>여자</td><td>10대</td><td>없음</td><td>없음</td><td>없음</td><td>미입력</td><td></td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>지인추천</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td>재밌다</td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이수빈</td><td>010-5140-0135</td><td>여자</td><td>10대</td><td>없음</td><td>없음</td><td>없음</td><td>미입력</td><td></td><td>서울</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>시설</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td>재미있었다.</td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>금명철</td><td>010-8853-0412</td><td>남자</td><td>40대</td><td>초등고학년(4~6학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>안경덕</td><td></td><td>여자</td><td>40대</td><td>중학생</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>조현석</td><td>010-7288-9774</td><td>남자</td><td>40대</td><td>초등고학년(4~6학년)</td><td>중학생</td><td>없음</td><td>미입력</td><td>2명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>가격</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>조혜영</td><td>010-7541-9068</td><td>여자</td><td>30대</td><td>초등저학년(1~3학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의안함</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>3회</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김원태</td><td>010-3034-9747</td><td>남자</td><td>30대</td><td>없음</td><td>없음</td><td>없음</td><td>미입력</td><td></td><td>서울</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>가격</td><td>시설</td><td></td><td>친구/지인</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김국화</td><td>010-6570-6683</td><td>여자</td><td>30대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td>공룡다리 없어서 아쉬움</td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>윤상희</td><td>010-2542-1515</td><td>여자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>부모/형제</td><td></td><td></td><td>보통</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이홍매</td><td>010-5650-6681</td><td>여자</td><td>30대</td><td>5세~7세</td><td>초등저학년(1~3학년)</td><td>없음</td><td>미입력</td><td>2명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>시설</td><td></td><td></td><td>배우자/자녀</td><td>부모/형제</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td>매우 좋음 </td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김재호</td><td>010-8289-6681</td><td>남자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>시설</td><td></td><td></td><td>배우자/자녀</td><td>부모/형제</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td>좋음 </td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김태연</td><td>010-7241-1215</td><td>여자</td><td>50대</td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>2회</td><td>근접성</td><td>시설</td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김수찬</td><td></td><td>남자</td><td>60대이상</td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>부천</td><td>동의</td><td>동의</td><td>회원</td><td>연간회원</td><td>4회이상</td><td>시설</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>보통</td><td></td><td>보통</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>유윤임</td><td>010-6319-3378</td><td>여자</td><td>60대이상</td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>부천</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>시설</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>보통</td><td></td><td>보통</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>강예린</td><td>010-8028-1390</td><td>여자</td><td>30대</td><td>36개월미만</td><td>36개월~4세</td><td>없음</td><td>미입력</td><td>2명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>가격</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td>버블좋아요 ^^</td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김애묵</td><td>010-7337-8700</td><td>여자</td><td>60대이상</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>미입력</td><td>회원</td><td>시즌권회원</td><td>2회</td><td>근접성</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김수빈</td><td>010-7101-6028</td><td>여자</td><td>30대</td><td>36개월~4세</td><td>5세~7세</td><td>없음</td><td>미입력</td><td>2명</td><td>서울</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td>시설</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>정혜림</td><td>010-3267-0111</td><td>여자</td><td>40대</td><td>초등저학년(1~3학년)</td><td>초등고학년(4~6학년)</td><td>없음</td><td>미입력</td><td>2명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김미진</td><td>010-3341-6492</td><td>여자</td><td>30대</td><td>36개월~4세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>근접성</td><td>시설</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td>식당음식이 너무 종류가 적어요</td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>박철</td><td>010-7110-9073</td><td>남자</td><td>40대</td><td>36개월~4세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>시설</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td></td><td>010-9142-2748</td><td>여자</td><td>60대이상</td><td>36개월~4세</td><td>5세~7세</td><td>없음</td><td>미입력</td><td>2명</td><td>부천</td><td>동의</td><td>미입력</td><td>회원</td><td>골프회원</td><td>3회</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>박상원</td><td>010-4416-6585</td><td>미입력</td><td>미입력</td><td>미입력</td><td></td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>회원</td><td>연간회원</td><td>4회이상</td><td>서비스</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td>항상 친절하게 대해 감사함</td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>권진선</td><td>010-5264-6565</td><td>여자</td><td>50대</td><td>초등저학년(1~3학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>부천</td><td>동의</td><td>미입력</td><td>회원</td><td>골프회원</td><td>3회</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Sun Dec 13 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이진석</td><td>010-7256-0111</td><td>남자</td><td>40대</td><td>초등저학년(1~3학년)</td><td>초등고학년(4~6학년)</td><td>없음</td><td>미입력</td><td>2명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>매우만족</td><td></td><td>불만족</td><td>맛, 음식양대비 가격등</td><td>있다</td><td></td></tr><tr><td>Wed Dec 16 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>윤태원</td><td>010-9528-9856</td><td>남자</td><td>40대</td><td>5세~7세</td><td>초등고학년(4~6학년)</td><td>없음</td><td>미입력</td><td>2명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>시설</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td>없음</td></tr><tr><td>Wed Dec 16 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김예회</td><td>010-2117-3517</td><td>남자</td><td>40대</td><td>미입력</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>회원</td><td>연간회원</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>부모/형제</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Wed Dec 16 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김수정</td><td>010-9894-3146</td><td>여자</td><td>40대</td><td>36개월미만</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>동의안함</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>시설</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Wed Dec 16 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>선우유경</td><td>010-3700-3517</td><td>여자</td><td>60대이상</td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>부천</td><td>동의</td><td>미입력</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>부모/형제</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Wed Dec 16 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이호정</td><td>010-9968-8427</td><td>여자</td><td>50대</td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>동의</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>지인추천</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Wed Dec 16 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>최공순</td><td>010-7229-8114</td><td>여자</td><td>50대 </td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>동의</td><td>미입력</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>지인추천</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Wed Dec 16 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>박승수</td><td>010-4603-6062</td><td>여자</td><td>50대</td><td>중학생</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의안함</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td>시설</td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td>화장실에 손비누가 나오지 않음 (한달이상)</td></tr><tr><td>Wed Dec 16 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>박인섭</td><td>010-4929-6021</td><td>여자</td><td>60대이상</td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>부천</td><td>동의</td><td>동의</td><td>회원</td><td>연간회원</td><td>4회이상</td><td>시설</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>보통</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Wed Dec 16 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>장보영</td><td>010-4627-5595</td><td>여자</td><td>60대이상</td><td>20세이상</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의안함</td><td>동의안함</td><td>회원</td><td>연간회원</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>기타</td><td></td><td></td><td>보통</td><td></td><td>만족</td><td></td><td>미입력</td><td></td><td>있다</td><td>복욕탕 온도를 차별화해주세요(탕별로 온도차가 적음) 사우나 2곳의 온도가 너무 낮아요. 수영장과 사우나 통로 개방 원함 </td></tr><tr><td>Wed Dec 16 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이효진</td><td>010-4859-9856</td><td>여자</td><td>40대</td><td>미입력</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>미입력</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>가격</td><td>시설</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Thu Dec 17 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>고은비</td><td>010-4787-0903</td><td>여자</td><td>30대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>3회</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>보통</td><td></td><td>만족</td><td></td><td>불만족</td><td></td><td>있다</td><td></td></tr><tr><td>Thu Dec 17 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>어윤창</td><td>010-5874-8382</td><td>남자</td><td>40대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Thu Dec 17 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김수한</td><td>010-5830-3508</td><td>남자</td><td>60대이상</td><td>미입력</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>부천</td><td>동의</td><td>미입력</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>서비스</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>보통</td><td></td><td>매우만족</td><td></td><td>보통</td><td></td><td>없다</td><td></td></tr><tr><td>Thu Dec 17 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>강모아</td><td>010-6602-1769</td><td>여자</td><td>미입력</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>매우만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Thu Dec 17 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이승민</td><td>010-9178-8590</td><td>남자</td><td>30대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>가격</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Thu Dec 17 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>양월화</td><td>010-5265-8139</td><td>여자</td><td>60대이상</td><td>없음</td><td>없음</td><td>없음</td><td>미입력</td><td></td><td>부천</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>시설</td><td></td><td></td><td>친구/지인</td><td></td><td></td><td>보통</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김수한</td><td>010-5330-3508</td><td>남자</td><td>60대이상</td><td>미입력</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>부천</td><td>동의</td><td>미입력</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>시설</td><td></td><td></td><td>부모/형제</td><td></td><td></td><td>보통</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td></td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>정슬기</td><td>010-7794-7249</td><td>여자</td><td>30대</td><td>36개월미만</td><td>5세~7세</td><td>없음</td><td>미입력</td><td>2명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>양은숙</td><td>010-9494-7879</td><td>여자</td><td>40대</td><td>초등고학년(4~6학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>있다</td><td>운영시간이 너무 짧아요</td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김기홍</td><td>010-9741-6263</td><td>남자</td><td>40대</td><td>초등고학년(4~6학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>회원</td><td>시즌권회원</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td>월,화 쉬는게 아쉬워요.</td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김소리</td><td>010-2222-8814</td><td>남자</td><td>10대</td><td>미입력</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td>다 좋아요 </td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이명진</td><td>010-8139-3006</td><td>남자</td><td>20대</td><td>미입력</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>미입력</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td>가격</td><td></td><td>친구/지인</td><td>연인</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>오정은</td><td>010-5473-7371</td><td>여자</td><td>30대</td><td>36개월미만</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>서울</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>시설</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>노성훈</td><td>010-3366-0322</td><td>남자</td><td>40대</td><td>5세~7세</td><td>초등저학년(1~3학년)</td><td>없음</td><td>미입력</td><td>2명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>시설</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>만족</td><td></td><td>보통</td><td></td><td>있다</td><td>시설 이용시간 동시 이루어 지지 않는다.</td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>정영화</td><td>010-5588-2632</td><td>여자</td><td>40대</td><td>5세~7세</td><td>초등저학년(1~3학년)</td><td>없음</td><td>미입력</td><td>2명</td><td>(부천/고양 제외)경기도</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>시설</td><td>기타</td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td>시설 다양한 음식과 놀거리가 많아 다시 이용예정입니다. </td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>박초롱</td><td>010-7205-8788</td><td>여자</td><td>30대</td><td>5세~7세</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>3회</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td></td><td></td><td>여자</td><td>10대</td><td>없음</td><td>없음</td><td>없음</td><td>미입력</td><td></td><td>인천</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>3회</td><td>시설</td><td></td><td></td><td>부모/형제</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>김정훈</td><td>010-4661-4746</td><td>남자</td><td>30대</td><td>초등저학년(1~3학년)</td><td>없음</td><td>없음</td><td>미입력</td><td>1명</td><td>고양</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>3회</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>강준형</td><td>010-6287-0122</td><td>남자</td><td>40대</td><td>5세~7세</td><td>초등저학년(1~3학년)</td><td>없음</td><td>미입력</td><td>2명</td><td>서울</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>4회이상</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>만족</td><td></td><td>있다</td><td></td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>박수진</td><td>010-7228-8597</td><td>여자</td><td>10대</td><td>없음</td><td>없음</td><td>없음</td><td>미입력</td><td></td><td>고양</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>처음방문</td><td>근접성</td><td></td><td></td><td>부모/형제</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>보통</td><td>조금짰어요</td><td>있다</td><td></td></tr><tr><td>Fri Dec 18 2026 23:59:08 GMT+0900 (한국 표준시)</td><td>이민종</td><td>010-7999-5039</td><td>여자</td><td>40대</td><td>5세~7세</td><td>초등저학년(1~3학년)</td><td>없음</td><td>미입력</td><td>2명</td><td>서울</td><td>동의</td><td>동의</td><td>해당없음</td><td>해당없음</td><td>2회</td><td>근접성</td><td></td><td></td><td>배우자/자녀</td><td></td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>매우만족</td><td></td><td>있다</td><td></td></tr></tbody></table><div style="padding:10px 14px;font-size:11px;color:var(--ink3);background:var(--paper);border-top:1px solid var(--border)">처음 100행만 표시됩니다. 전체 1703행은 분석결과 다운로드에 포함됩니다.</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let rawData=[], headers=[], colTypes=[], analysisResult={}, chartInstances=[];
+
+// ── 드래그&드롭 ──
+function onDragOver(e){e.preventDefault();document.getElementById('dropZone').classList.add('drag')}
+function onDragLeave(e){document.getElementById('dropZone').classList.remove('drag')}
+function onDrop(e){e.preventDefault();document.getElementById('dropZone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)processFile(f)}
+function onFileSelect(e){const f=e.target.files[0];if(f)processFile(f)}
+
+// ── 파일 처리 ──
+function processFile(file){
+  document.getElementById('fileInfo').textContent='📎 '+file.name+' ('+Math.round(file.size/1024)+'KB)';
+  document.getElementById('prog').style.display='block';
+  setProgress(10,'파일 읽는 중...');
+  const reader=new FileReader();
+  reader.onload=function(e){
+    setProgress(30,'데이터 파싱 중...');
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(!json||json.length<2){alert('데이터가 부족합니다. 1행 헤더 + 2행 이상 데이터가 필요합니다.');resetProg();return}
+      headers=json[0].map(h=>String(h).trim()).filter(h=>h);
+      rawData=json.slice(1).filter(row=>row.some(c=>c!=='')).map(row=>headers.map((_,i)=>row[i]!==undefined?row[i]:''));
+      setProgress(60,'항목 분석 중...');
+      analyzeData();
+      setProgress(90,'시각화 생성 중...');
+      renderAll();
+      setProgress(100,'완료!');
+      setTimeout(()=>{document.getElementById('prog').style.display='none';document.getElementById('resultArea').style.display='block';window.scrollTo({top:document.getElementById('resultArea').offsetTop-20,behavior:'smooth'})},600);
+    }catch(err){alert('파일 읽기 오류: '+err.message);resetProg()}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function setProgress(pct,title){document.getElementById('progF').style.width=pct+'%';document.getElementById('progTitle').textContent=title}
+function resetProg(){document.getElementById('prog').style.display='none'}
+
+// ── 컬럼 타입 감지 ──
+function detectColType(vals){
+  const nonEmpty=vals.filter(v=>v!==''&&v!==null&&v!==undefined);
+  if(nonEmpty.length===0)return'empty';
+  const unique=[...new Set(nonEmpty.map(v=>String(v).trim()))];
+  // 숫자형
+  const numVals=nonEmpty.filter(v=>!isNaN(parseFloat(v))&&isFinite(v));
+  if(numVals.length/nonEmpty.length>0.85){
+    const nums=numVals.map(v=>parseFloat(v));
+    const max=Math.max(...nums);
+    if(max<=10&&[...new Set(nums)].length<=10)return'likert';
+    return'numeric';
+  }
+  // 범주형
+  if(unique.length<=15&&unique.length<nonEmpty.length*0.5)return'category';
+  // 텍스트
+  return'text';
+}
+
+// ── 데이터 분석 ──
+function analyzeData(){
+  colTypes=headers.map((_,ci)=>detectColType(rawData.map(r=>r[ci])));
+  analysisResult={};
+  headers.forEach((h,ci)=>{
+    const vals=rawData.map(r=>r[ci]);
+    const nonEmpty=vals.filter(v=>v!==''&&v!==null);
+    const type=colTypes[ci];
+    const res={type,total:vals.length,filled:nonEmpty.length,missing:vals.length-nonEmpty.length};
+
+    if(type==='numeric'||type==='likert'){
+      const nums=nonEmpty.filter(v=>!isNaN(parseFloat(v))).map(v=>parseFloat(v));
+      if(nums.length){
+        res.mean=(nums.reduce((a,b)=>a+b,0)/nums.length);
+        res.min=Math.min(...nums);res.max=Math.max(...nums);
+        const sorted=[...nums].sort((a,b)=>a-b);
+        res.median=sorted[Math.floor(sorted.length/2)];
+        const mean=res.mean;
+        res.std=Math.sqrt(nums.reduce((a,b)=>a+Math.pow(b-mean,2),0)/nums.length);
+        res.nums=nums;
+      }
+    }
+    if(type==='category'||type==='likert'){
+      const freq={};
+      nonEmpty.forEach(v=>{const k=String(v).trim();freq[k]=(freq[k]||0)+1});
+      res.freq=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+    }
+    if(type==='text'){
+      res.avgLen=nonEmpty.length?Math.round(nonEmpty.reduce((a,v)=>a+String(v).length,0)/nonEmpty.length):0;
+      res.samples=nonEmpty.slice(0,3).map(v=>String(v).slice(0,60));
+    }
+    analysisResult[h]=res;
+  });
+}
+
+// ── 전체 렌더 ──
+function renderAll(){
+  renderStats();
+  renderSummary();
+  renderColAnalysis();
+  renderCharts();
+  renderRawTable();
+}
+
+// ── 통계 카드 ──
+function renderStats(){
+  const totalResp=rawData.length;
+  const totalCols=headers.length;
+  const numericCols=colTypes.filter(t=>t==='numeric'||t==='likert').length;
+  const catCols=colTypes.filter(t=>t==='category').length;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat b"><div class="stat-num b">${totalResp}</div><div class="stat-lbl b">총 응답 수</div></div>
+    <div class="stat g"><div class="stat-num g">${totalCols}</div><div class="stat-lbl g">설문 항목 수</div></div>
+    <div class="stat y"><div class="stat-num y">${numericCols}</div><div class="stat-lbl y">수치형 항목</div></div>
+    <div class="stat r"><div class="stat-num r">${catCols}</div><div class="stat-lbl r">선택형 항목</div></div>`;
+}
+
+// ── AI 요약 ──
+function renderSummary(){
+  const totalResp=rawData.length;
+  const insights=[];
+
+  // 응답률
+  headers.forEach(h=>{
+    const r=analysisResult[h];
+    const rate=Math.round(r.filled/r.total*100);
+    if(rate<80)insights.push(`"${h}" 항목의 응답률이 ${rate}%로 낮습니다. 해당 문항 검토를 권장합니다.`);
+  });
+
+  // 수치형 주요 인사이트
+  headers.forEach(h=>{
+    const r=analysisResult[h];
+    if((r.type==='likert'||r.type==='numeric')&&r.mean!==undefined){
+      if(r.type==='likert'){
+        const score=r.mean;
+        const tag=score>=4?'매우 긍정적':score>=3?'보통':score<2?'개선 필요':'부정적';
+        insights.push(`"${h}" 평균 점수 ${r.mean.toFixed(2)}점 — ${tag}인 응답 경향.`);
+      }
+    }
+  });
+
+  // 선택형 최다 응답
+  headers.forEach(h=>{
+    const r=analysisResult[h];
+    if(r.type==='category'&&r.freq&&r.freq.length){
+      const top=r.freq[0];
+      const pct=Math.round(top[1]/r.filled*100);
+      if(pct>=40)insights.push(`"${h}" 항목에서 "${top[0]}"이 ${pct}%로 가장 많이 선택됐습니다.`);
+    }
+  });
+
+  if(!insights.length)insights.push(`총 ${totalResp}명이 ${headers.length}개 항목에 응답했으며 데이터가 전반적으로 양호합니다.`);
+
+  const likerItems=headers.filter((_,i)=>colTypes[i]==='likert');
+  let overallInsight='';
+  if(likerItems.length){
+    const avgs=likerItems.map(h=>analysisResult[h].mean||0);
+    const overall=(avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(2);
+    overallInsight=`리커트 척도 항목 ${likerItems.length}개의 전체 평균은 <strong>${overall}점</strong>입니다.`;
+  }
+
+  document.getElementById('summaryBox').innerHTML=`
+    <div class="summary-title">📝 분석 요약 리포트</div>
+    <ul class="summary-list">
+      ${insights.slice(0,6).map((ins,i)=>`<li class="summary-item"><div class="summary-num">${i+1}</div><span>${ins}</span></li>`).join('')}
+    </ul>
+    ${overallInsight?`<div class="insight-box"><div class="insight-label">OVERALL INSIGHT</div><div class="insight-text">${overallInsight} 총 ${totalResp}명의 응답을 바탕으로 항목별 상세 분석 결과를 확인하세요.</div></div>`:''}`;
+}
+
+// ── 항목별 분석 ──
+function renderColAnalysis(){
+  document.getElementById('colCount').textContent=`${headers.length}개 항목`;
+  const html=headers.map((h,ci)=>{
+    const r=analysisResult[h];
+    const typeLabel={numeric:'수치형',likert:'리커트',category:'선택형',text:'텍스트',empty:'빈 항목'}[r.type]||r.type;
+    const typeCls={numeric:'b',likert:'g',category:'y',text:'gray',empty:'r'}[r.type]||'gray';
+    let content='';
+    if(r.type==='likert'||r.type==='numeric'){
+      content=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px">
+        <div style="text-align:center"><div style="font-size:18px;font-weight:900;color:var(--accent)">${r.mean!==undefined?r.mean.toFixed(2):'—'}</div><div style="font-size:10px;color:var(--ink3);font-weight:700">평균</div></div>
+        <div style="text-align:center"><div style="font-size:18px;font-weight:900;color:var(--green)">${r.median!==undefined?r.median:'—'}</div><div style="font-size:10px;color:var(--ink3);font-weight:700">중앙값</div></div>
+        <div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--ink2)">${r.min!==undefined?r.min:''} ~ ${r.max!==undefined?r.max:''}</div><div style="font-size:10px;color:var(--ink3);font-weight:700">최소~최대</div></div>
+        <div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--gold)">${r.std!==undefined?r.std.toFixed(2):'—'}</div><div style="font-size:10px;color:var(--ink3);font-weight:700">표준편차</div></div>
+      </div>`;
+    }
+    if((r.type==='category'||r.type==='likert')&&r.freq){
+      const top5=r.freq.slice(0,6);
+      content+=`<div style="display:flex;flex-direction:column;gap:6px">${top5.map(([val,cnt])=>{
+        const pct=(cnt/r.filled*100).toFixed(2);
+        const pctBar=Math.round(cnt/r.filled*100);
+        return`<div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">${val}</span><span style="font-size:12px;color:var(--ink3)">${cnt}명</span></div><div class="freq-bar-wrap"><div class="freq-bar-bg"><div class="freq-bar" style="width:${pctBar}%"></div></div><div class="freq-pct">${pct}%</div></div></div>`;
+      }).join('')}</div>`;
+    }
+    if(r.type==='text'){
+      content+=`<div style="font-size:11px;color:var(--ink3);margin-bottom:6px">평균 답변 길이: <strong>${r.avgLen}자</strong></div>
+      <div style="display:flex;flex-direction:column;gap:5px">${(r.samples||[]).map(s=>`<div style="background:var(--paper);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.5">"${s}${s.length>=60?'…':''}"</div>`).join('')}</div>`;
+    }
+    const fillRate=(r.filled/r.total*100).toFixed(2);
+    const fillRateNum=parseFloat(fillRate);
+    return`<div style="background:var(--paper);border:1px solid var(--border);border-radius:11px;padding:13px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">${h}<span class="col-type-badge">${typeLabel}</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="bdg ${typeCls}">${typeLabel}</span>
+          <span style="font-size:11px;color:${fillRateNum<80?'var(--red)':'var(--ink3)'}">${r.filled}/${r.total}명 응답 (${fillRate}%)</span>
+        </div>
+      </div>
+      ${content||'<div style="font-size:12px;color:var(--ink3)">분석 데이터 없음</div>'}
+    </div>`;
+  }).join('');
+  document.getElementById('colAnalysis').innerHTML=html;
+}
+
+// ── 차트 렌더 ──
+function renderCharts(){
+  // 기존 차트 파괴
+  chartInstances.forEach(c=>{try{c.destroy()}catch(e){}});
+  chartInstances=[];
+  const container=document.getElementById('chartGrid');
+  container.innerHTML='';
+
+  const COLORS=['#1B4FD8','#1A7A4A','#C93838','#B07D2A','#7B3FB5','#0D8080','#C95A1A','#2A6DB0'];
+
+  headers.forEach((h,ci)=>{
+    const r=analysisResult[h];
+    if(!((r.type==='category'||r.type==='likert')&&r.freq&&r.freq.length)) return;
+    const labels=r.freq.slice(0,8).map(([v])=>v);
+    const data=r.freq.slice(0,8).map(([,c])=>c);
+    const isLikert=r.type==='likert';
+    const chartType=isLikert?'bar':'doughnut';
+
+    const box=document.createElement('div');
+    box.className='chart-box';
+    box.innerHTML=`<div class="chart-title">${h}</div><div class="chart-canvas-wrap"><canvas id="chart_${ci}"></canvas></div>`;
+    container.appendChild(box);
+
+    const ctx=document.getElementById('chart_'+ci).getContext('2d');
+
+    // 수치 직접 표시 플러그인
+    const dataLabelPlugin={
+      id:'dlabel_'+ci,
+      afterDatasetsDraw(chart){
+        const {ctx:c2}=chart;
+        c2.save();
+        chart.data.datasets.forEach((ds,di)=>{
+          chart.getDatasetMeta(di).data.forEach((el,idx)=>{
+            const val=ds.data[idx];
+            if(!val)return;
+            const pct=Math.round(val/r.filled*100);
+            c2.textAlign='center';
+            c2.textBaseline='middle';
+            if(chartType==='bar'){
+              // 막대 상단에 표시
+              c2.font='bold 10px "Noto Sans KR",sans-serif';
+              c2.fillStyle='#1B4FD8';
+              c2.fillText(val+'명', el.x, el.y-14);
+              c2.font='9px "Noto Sans KR",sans-serif';
+              c2.fillStyle='#7A8A9C';
+              c2.fillText('('+pct+'%)', el.x, el.y-3);
+            } else {
+              // 도넛 조각 중심에 표시 (5% 이상)
+              if(pct>=5){
+                const ang=(el.startAngle+el.endAngle)/2;
+                const mid=(el.innerRadius+el.outerRadius)/2;
+                const x2=el.x+Math.cos(ang)*mid;
+                const y2=el.y+Math.sin(ang)*mid;
+                c2.font='bold 10px "Noto Sans KR",sans-serif';
+                c2.fillStyle='#fff';
+                c2.fillText(pct+'%', x2, y2-5);
+                c2.font='9px "Noto Sans KR",sans-serif';
+                c2.fillText(val+'명', x2, y2+7);
+              }
+            }
+          });
+        });
+        c2.restore();
+      }
+    };
+
+    const bgColors=COLORS.slice(0,data.length);
+    const inst=new Chart(ctx,{
+      type:chartType,
+      data:{
+        labels,
+        datasets:[{
+          data,
+          backgroundColor:bgColors,
+          borderWidth:isLikert?0:2,
+          borderColor:'#fff',
+          borderRadius:isLikert?5:0,
+          hoverOffset:isLikert?0:6
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        layout:{padding:{top:isLikert?32:8,right:10,bottom:4,left:10}},
+        plugins:{
+          legend:{
+            display:!isLikert,
+            position:'right',
+            labels:{
+              font:{size:10},boxWidth:12,padding:8,
+              generateLabels(chart){
+                return chart.data.labels.map((lbl,i)=>({
+                  text:lbl+'  '+chart.data.datasets[0].data[i]+'명 ('+Math.round(chart.data.datasets[0].data[i]/r.filled*100)+'%)',
+                  fillStyle:chart.data.datasets[0].backgroundColor[i],
+                  hidden:false,index:i
+                }));
+              }
+            }
+          },
+          tooltip:{callbacks:{label:c3=>`${c3.label}: ${c3.raw}명 (${Math.round(c3.raw/r.filled*100)}%)`}}
+        },
+        scales:isLikert?{
+          y:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}},grid:{color:'rgba(0,0,0,.06)'}},
+          x:{ticks:{font:{size:9},maxRotation:30},grid:{display:false}}
+        }:{}
+      },
+      plugins:[dataLabelPlugin]
+    });
+    chartInstances.push(inst);
+  });
+
+  if(!container.children.length){
+    container.innerHTML='<div class="empty"><span class="empty-ic">📊</span><div class="empty-t">시각화 가능한 항목 없음</div><div class="empty-s">선택형(객관식) 또는 리커트 척도 항목이 있어야 차트가 생성됩니다</div></div>';
+  }
+}
+
+// ── 원본 데이터 테이블 ──
+function renderRawTable(){
+  const maxRows=Math.min(rawData.length,100);
+  const thead=`<tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr>`;
+  const tbody=rawData.slice(0,maxRows).map(row=>`<tr>${row.map(c=>`<td>${String(c).slice(0,80)}</td>`).join('')}</tr>`).join('');
+  const note=rawData.length>100?`<div style="padding:10px 14px;font-size:11px;color:var(--ink3);background:var(--paper);border-top:1px solid var(--border)">처음 100행만 표시됩니다. 전체 ${rawData.length}행은 분석결과 다운로드에 포함됩니다.</div>`:'';
+  document.getElementById('rawTable').innerHTML=`<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>${note}`;
+}
+
+// ── 분석결과 엑셀 다운로드 ──
+function exportExcel(){
+  if(!rawData.length){alert('데이터가 없습니다.');return}
+  const wb=XLSX.utils.book_new();
+
+  // 요약 시트
+  const summaryRows=[['항목','타입','응답수','결측','평균','중앙값','최소','최대','표준편차','최다선택','최다선택%']];
+  headers.forEach(h=>{
+    const r=analysisResult[h];
+    const top=r.freq&&r.freq.length?r.freq[0]:['',''];
+    summaryRows.push([h,r.type,r.filled,r.missing,r.mean!==undefined?+r.mean.toFixed(2):'',r.median!==undefined?r.median:'',r.min!==undefined?r.min:'',r.max!==undefined?r.max:'',r.std!==undefined?+r.std.toFixed(2):'',top[0],r.filled?Math.round(top[1]/r.filled*100)+'%':'']);
+  });
+  const wsSummary=XLSX.utils.aoa_to_sheet(summaryRows);
+  wsSummary['!cols']=summaryRows[0].map(()=>({wch:15}));
+  XLSX.utils.book_append_sheet(wb,wsSummary,'분석요약');
+
+  // 원본 데이터 시트
+  const wsRaw=XLSX.utils.aoa_to_sheet([headers,...rawData]);
+  wsRaw['!cols']=headers.map(()=>({wch:18}));
+  XLSX.utils.book_append_sheet(wb,wsRaw,'원본데이터');
+
+  // 빈도표 시트
+  const freqRows=[['항목','선택지','빈도','비율']];
+  headers.forEach(h=>{
+    const r=analysisResult[h];
+    if(r.freq)r.freq.forEach(([v,c])=>freqRows.push([h,v,c,r.filled?Math.round(c/r.filled*100)+'%':'']));
+  });
+  const wsFreq=XLSX.utils.aoa_to_sheet(freqRows);
+  XLSX.utils.book_append_sheet(wb,wsFreq,'빈도표');
+
+  XLSX.writeFile(wb,`설문분석결과_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+
+// ── PPT 다운로드 ──
+async function exportPPT(){
+  if(!rawData.length){alert('데이터가 없습니다. 먼저 파일을 업로드해주세요.');return}
+  if(typeof PptxGenJS==='undefined'){alert('PptxGenJS 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.');return}
+
+  const pres=new PptxGenJS();
+  pres.layout='LAYOUT_16x9';
+  pres.title='설문결과 분석 보고서';
+
+  // 색상 팔레트
+  const C={
+    navy:'0C2D6B', navyLight:'E8EEF8',
+    accent:'1B4FD8', accentLight:'E8EEFB',
+    green:'1A7A4A', greenLight:'E8F5EE',
+    red:'C93838', redLight:'FDEAEA',
+    gold:'B07D2A', goldLight:'FDF5E4',
+    gray:'5F5E5A', grayLight:'F3F5FA',
+    white:'FFFFFF', border:'D0CEC6',
+    text:'0F1923', text2:'3A4A5C'
+  };
+  const CHART_COLORS=['1B4FD8','1A7A4A','C93838','B07D2A','7B3FB5','0D8080','C95A1A','2A6DB0'];
+
+  const today=new Date().toLocaleDateString('ko-KR');
+  const totalResp=rawData.length;
+  const totalCols=headers.length;
+
+  // ─── SLIDE 1: 표지 ───
+  {
+    const sl=pres.addSlide();
+    sl.background={color:C.navy};
+    // 상단 장식
+    sl.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.08,fill:{color:C.accent},line:{color:C.accent}});
+    sl.addShape(pres.shapes.RECTANGLE,{x:0,y:5.545,w:10,h:0.08,fill:{color:C.accent},line:{color:C.accent}});
+    // 타이틀
+    sl.addText('설문결과 분석 보고서',{x:0.6,y:1.5,w:8.8,h:1.2,fontSize:40,bold:true,color:C.white,fontFace:'Calibri',align:'center'});
+    sl.addText('Survey Result Analysis Report',{x:0.6,y:2.7,w:8.8,h:0.5,fontSize:16,color:'CADCFC',fontFace:'Calibri',align:'center',italic:true});
+    // 구분선
+    sl.addShape(pres.shapes.RECTANGLE,{x:3.5,y:3.4,w:3,h:0.04,fill:{color:'CADCFC'},line:{color:'CADCFC'}});
+    // 메타 정보
+    sl.addText([
+      {text:`총 응답자 수: `,options:{bold:true,color:C.white}},{text:`${totalResp}명`,options:{color:'CADCFC'}},{text:'     ',options:{}},
+      {text:`설문 항목: `,options:{bold:true,color:C.white}},{text:`${totalCols}개`,options:{color:'CADCFC'}},
+    ],{x:1,y:3.7,w:8,h:0.5,fontSize:14,fontFace:'Calibri',align:'center'});
+    sl.addText(`분석일: ${today}`,{x:1,y:4.3,w:8,h:0.4,fontSize:12,color:'CADCFC',fontFace:'Calibri',align:'center'});
+  }
+
+  // ─── SLIDE 2: 전체 요약 ───
+  {
+    const sl=pres.addSlide();
+    sl.background={color:C.white};
+    // 헤더 바
+    sl.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.9,fill:{color:C.navy},line:{color:C.navy}});
+    sl.addText('전체 응답 요약',{x:0.4,y:0,w:9.2,h:0.9,fontSize:22,bold:true,color:C.white,fontFace:'Calibri',valign:'middle'});
+
+    // 4개 통계 카드
+    const numericCols=colTypes.filter(t=>t==='numeric'||t==='likert').length;
+    const catCols=colTypes.filter(t=>t==='category').length;
+    const textCols=colTypes.filter(t=>t==='text').length;
+    const cards=[
+      {label:'총 응답자',val:totalResp+'명',bg:C.accentLight,tc:C.accent},
+      {label:'설문 항목 수',val:totalCols+'개',bg:C.greenLight,tc:C.green},
+      {label:'수치/척도형',val:numericCols+'개',bg:C.goldLight,tc:C.gold},
+      {label:'선택/텍스트형',val:(catCols+textCols)+'개',bg:C.redLight,tc:C.red},
+    ];
+    cards.forEach((c,i)=>{
+      const x=0.3+i*2.4;
+      sl.addShape(pres.shapes.RECTANGLE,{x,y:1.1,w:2.15,h:1.4,fill:{color:c.bg},line:{color:C.border,pt:1},shadow:{type:'outer',color:'000000',opacity:0.08,blur:4,offset:2,angle:135}});
+      sl.addText(c.val,{x,y:1.2,w:2.15,h:0.7,fontSize:28,bold:true,color:c.tc,fontFace:'Calibri',align:'center'});
+      sl.addText(c.label,{x,y:1.9,w:2.15,h:0.4,fontSize:11,color:C.gray,fontFace:'Calibri',align:'center'});
+    });
+
+    // 주요 인사이트
+    sl.addText('📋  주요 분석 인사이트',{x:0.4,y:2.75,w:9.2,h:0.4,fontSize:14,bold:true,color:C.navy,fontFace:'Calibri'});
+    sl.addShape(pres.shapes.RECTANGLE,{x:0.4,y:3.15,w:9.2,h:2.0,fill:{color:C.navyLight},line:{color:C.border,pt:1}});
+
+    const insights=[];
+    headers.forEach(h=>{
+      const r=analysisResult[h];
+      if((r.type==='likert'||r.type==='numeric')&&r.mean!==undefined){
+        const tag=r.mean>=4?'긍정적':r.mean>=3?'보통':r.mean<2?'개선 필요':'부정적';
+        insights.push(`"${h}" 평균 ${r.mean.toFixed(2)}점 (${tag})`);
+      }
+      if(r.type==='category'&&r.freq&&r.freq.length){
+        const top=r.freq[0]; const pct=Math.round(top[1]/r.filled*100);
+        if(pct>=35) insights.push(`"${h}" 최다 응답: "${top[0]}" (${pct}%)`);
+      }
+    });
+    if(!insights.length) insights.push(`총 ${totalResp}명 응답, ${totalCols}개 항목 분석 완료`);
+
+    const bulletItems=insights.slice(0,5).map((ins,i)=>({
+      text:ins,
+      options:{bullet:true,breakLine:i<Math.min(insights.length,5)-1,fontSize:12,color:C.text2,fontFace:'Calibri'}
+    }));
+    sl.addText(bulletItems,{x:0.7,y:3.25,w:8.8,h:1.8});
+  }
+
+  // ─── 항목별 슬라이드 ───
+  for(let ci=0;ci<headers.length;ci++){
+    const h=headers[ci];
+    const r=analysisResult[h];
+    const typeLabel={numeric:'수치형',likert:'리커트 척도',category:'선택형',text:'텍스트',empty:'빈 항목'}[r.type]||r.type;
+    const fillRate=Math.round(r.filled/r.total*100);
+
+    const sl=pres.addSlide();
+    sl.background={color:C.white};
+
+    // 헤더
+    sl.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.85,fill:{color:C.navy},line:{color:C.navy}});
+    const shortH=h.length>40?h.slice(0,40)+'…':h;
+    sl.addText(shortH,{x:0.4,y:0,w:8.2,h:0.85,fontSize:18,bold:true,color:C.white,fontFace:'Calibri',valign:'middle'});
+    sl.addShape(pres.shapes.RECTANGLE,{x:8.65,y:0.18,w:1.1,h:0.48,fill:{color:C.accent},line:{color:C.accent}});
+    sl.addText(typeLabel,{x:8.65,y:0.18,w:1.1,h:0.48,fontSize:9,bold:true,color:C.white,fontFace:'Calibri',align:'center',valign:'middle'});
+
+    // 응답률 표시
+    sl.addText(`응답: ${r.filled}/${r.total}명  (${fillRate}%)`,{x:0.4,y:0.92,w:5,h:0.28,fontSize:10,color:fillRate<80?C.red:C.gray,fontFace:'Calibri'});
+
+    // ── 수치형/리커트 ──
+    if((r.type==='numeric'||r.type==='likert')&&r.mean!==undefined){
+      // 통계 카드 4개
+      const stats=[
+        {label:'평균',val:r.mean.toFixed(2),tc:C.accent,bg:C.accentLight},
+        {label:'중앙값',val:String(r.median),tc:C.green,bg:C.greenLight},
+        {label:'표준편차',val:r.std.toFixed(2),tc:C.gold,bg:C.goldLight},
+        {label:'범위',val:`${r.min}~${r.max}`,tc:C.red,bg:C.redLight},
+      ];
+      stats.forEach((s,i)=>{
+        const x=0.3+i*2.4;
+        sl.addShape(pres.shapes.RECTANGLE,{x,y:1.3,w:2.15,h:1.1,fill:{color:s.bg},line:{color:C.border,pt:1},shadow:{type:'outer',color:'000000',opacity:0.07,blur:3,offset:2,angle:135}});
+        sl.addText(s.val,{x,y:1.35,w:2.15,h:0.6,fontSize:24,bold:true,color:s.tc,fontFace:'Calibri',align:'center'});
+        sl.addText(s.label,{x,y:1.93,w:2.15,h:0.3,fontSize:10,color:C.gray,fontFace:'Calibri',align:'center'});
+      });
+
+      // 해석 문구
+      let interp='';
+      if(r.type==='likert'){
+        if(r.mean>=4.5) interp='매우 긍정적인 응답 경향을 보입니다. 응답자 대부분이 높은 만족도를 나타내고 있습니다.';
+        else if(r.mean>=4.0) interp='긍정적인 응답 경향입니다. 전반적으로 높은 평가를 받고 있습니다.';
+        else if(r.mean>=3.0) interp='보통 수준의 응답입니다. 개선 여지가 있으며 추가 분석이 필요합니다.';
+        else if(r.mean>=2.0) interp='부정적인 응답 경향이 나타납니다. 해당 항목에 대한 개선 방안 검토가 필요합니다.';
+        else interp='매우 낮은 점수로, 즉각적인 개선이 필요한 항목입니다.';
+      } else {
+        interp=`평균값 ${r.mean.toFixed(2)}을 기준으로 표준편차 ${r.std.toFixed(2)}의 분포를 보입니다. 최소 ${r.min}에서 최대 ${r.max}의 범위를 나타냅니다.`;
+      }
+      sl.addShape(pres.shapes.RECTANGLE,{x:0.4,y:2.55,w:9.2,h:0.7,fill:{color:C.navyLight},line:{color:C.border,pt:1}});
+      sl.addText('💡 해석: '+interp,{x:0.55,y:2.6,w:9.0,h:0.6,fontSize:11,color:C.text2,fontFace:'Calibri',valign:'middle'});
+
+      // 빈도 있으면 막대차트
+      if(r.freq&&r.freq.length>=2){
+        const chartLabels=r.freq.slice(0,8).map(([v])=>String(v));
+        const chartVals=r.freq.slice(0,8).map(([,c])=>c);
+        sl.addChart(pres.charts.BAR,[{name:'응답수',labels:chartLabels,values:chartVals}],{
+          x:0.4,y:3.35,w:9.2,h:2.0,barDir:'col',
+          chartColors:CHART_COLORS,
+          chartArea:{fill:{color:C.white},roundedCorners:false},
+          catAxisLabelColor:C.gray,valAxisLabelColor:C.gray,
+          valGridLine:{color:'E2E8F0',size:0.5},catGridLine:{style:'none'},
+          showValue:true,dataLabelColor:'1E293B',dataLabelFontSize:9,
+          showLegend:false,
+          valAxisMaxVal:Math.max(...chartVals)+Math.ceil(Math.max(...chartVals)*0.15),
+        });
+      }
+    }
+
+    // ── 선택형 ──
+    else if(r.type==='category'&&r.freq&&r.freq.length){
+      // 집계 테이블
+      const tblData=[
+        [{text:'선택지',options:{fill:{color:C.navy},color:C.white,bold:true,fontSize:10,fontFace:'Calibri'}},
+         {text:'응답수',options:{fill:{color:C.navy},color:C.white,bold:true,fontSize:10,fontFace:'Calibri',align:'center'}},
+         {text:'비율',options:{fill:{color:C.navy},color:C.white,bold:true,fontSize:10,fontFace:'Calibri',align:'center'}}],
+        ...r.freq.slice(0,8).map(([v,c],ri)=>{
+          const pct=Math.round(c/r.filled*100);
+          const bg=ri===0?C.accentLight:ri%2===0?'F8F9FA':C.white;
+          return[
+            {text:String(v).slice(0,30),options:{fill:{color:bg},fontSize:10,fontFace:'Calibri',color:ri===0?C.accent:C.text}},
+            {text:String(c)+'명',options:{fill:{color:bg},fontSize:10,fontFace:'Calibri',align:'center',color:ri===0?C.accent:C.text,bold:ri===0}},
+            {text:pct+'%',options:{fill:{color:bg},fontSize:10,fontFace:'Calibri',align:'center',color:ri===0?C.accent:C.text,bold:ri===0}},
+          ];
+        })
+      ];
+      sl.addTable(tblData,{x:0.4,y:1.25,w:4.4,colW:[2.6,0.9,0.9],border:{pt:1,color:C.border}});
+
+      // 원형차트
+      const chartLabels=r.freq.slice(0,7).map(([v])=>String(v));
+      const chartVals=r.freq.slice(0,7).map(([,c])=>c);
+      // 기타 묶기
+      if(r.freq.length>7){
+        const rest=r.freq.slice(7).reduce((a,[,c])=>a+c,0);
+        chartLabels.push('기타'); chartVals.push(rest);
+      }
+      sl.addChart(pres.charts.PIE,[{name:'응답비율',labels:chartLabels,values:chartVals}],{
+        x:5.0,y:1.1,w:4.7,h:3.2,
+        chartColors:CHART_COLORS,
+        showPercent:true,dataLabelFontSize:10,dataLabelColor:C.white,
+        showLegend:true,legendPos:'b',legendFontSize:9,legendColor:C.gray,
+        chartArea:{fill:{color:C.white}},
+      });
+
+      // 인사이트
+      const top=r.freq[0]; const topPct=Math.round(top[1]/r.filled*100);
+      const top2=r.freq[1]; const top2Pct=r.freq[1]?Math.round(top2[1]/r.filled*100):0;
+      let interp=`가장 많이 선택된 응답은 "${top[0]}"으로 전체의 ${topPct}%를 차지합니다.`;
+      if(top2) interp+=` 그 다음으로 "${top2[0]}"이 ${top2Pct}%를 나타냅니다.`;
+      if(topPct>=60) interp+=' 응답이 특정 선택지에 집중되어 있어 해당 항목에 대한 명확한 경향을 파악할 수 있습니다.';
+      else if(r.freq.length>=4&&topPct<30) interp+=' 응답이 여러 선택지에 고르게 분산되어 있어 다양한 의견이 존재함을 나타냅니다.';
+      sl.addShape(pres.shapes.RECTANGLE,{x:0.4,y:4.6,w:9.2,h:0.75,fill:{color:C.navyLight},line:{color:C.border,pt:1}});
+      sl.addText('💡 해석: '+interp,{x:0.55,y:4.65,w:9.0,h:0.65,fontSize:10,color:C.text2,fontFace:'Calibri',valign:'middle'});
+    }
+
+    // ── 텍스트형 ──
+    else if(r.type==='text'){
+      sl.addShape(pres.shapes.RECTANGLE,{x:0.4,y:1.25,w:9.2,h:0.5,fill:{color:C.navyLight},line:{color:C.border,pt:1}});
+      sl.addText(`📝 주관식 응답 항목 | 총 ${r.filled}개 응답 | 평균 ${r.avgLen}자`,{x:0.55,y:1.3,w:9.0,h:0.4,fontSize:11,color:C.navy,fontFace:'Calibri',bold:true});
+
+      const samples=(r.samples||[]).slice(0,4);
+      samples.forEach((s,i)=>{
+        sl.addShape(pres.shapes.RECTANGLE,{x:0.4,y:1.9+i*0.75,w:9.2,h:0.65,fill:{color:i%2===0?C.white:C.grayLight},line:{color:C.border,pt:1}});
+        sl.addText(`"${s}${s.length>=60?'…':''}"`,{x:0.55,y:1.95+i*0.75,w:9.0,h:0.55,fontSize:11,color:C.text,fontFace:'Calibri',italic:true,valign:'middle'});
+      });
+
+      sl.addShape(pres.shapes.RECTANGLE,{x:0.4,y:5.0,w:9.2,h:0.4,fill:{color:C.navyLight},line:{color:C.border,pt:1}});
+      sl.addText(`💡 주관식 응답으로, 평균 ${r.avgLen}자의 답변이 수집되었습니다. 내용 분석 및 키워드 추출을 통한 추가 분석을 권장합니다.`,{x:0.55,y:5.02,w:9.0,h:0.36,fontSize:9,color:C.text2,fontFace:'Calibri',valign:'middle'});
+    }
+  }
+
+  // ─── 마지막 슬라이드: 종합 결론 ───
+  {
+    const sl=pres.addSlide();
+    sl.background={color:C.navy};
+    sl.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.08,fill:{color:C.accent},line:{color:C.accent}});
+    sl.addShape(pres.shapes.RECTANGLE,{x:0,y:5.545,w:10,h:0.08,fill:{color:C.accent},line:{color:C.accent}});
+
+    sl.addText('종합 결론',{x:0.6,y:0.5,w:8.8,h:0.8,fontSize:32,bold:true,color:C.white,fontFace:'Calibri',align:'center'});
+    sl.addShape(pres.shapes.RECTANGLE,{x:3.5,y:1.4,w:3,h:0.04,fill:{color:'CADCFC'},line:{color:'CADCFC'}});
+
+    // 결론 항목
+    const conclusions=[];
+    let likerAvgAll=0, likerCount=0;
+    headers.forEach(h=>{
+      const r=analysisResult[h];
+      if((r.type==='likert'||r.type==='numeric')&&r.mean!==undefined){likerAvgAll+=r.mean;likerCount++;}
+    });
+    if(likerCount>0) conclusions.push(`수치/척도 항목 ${likerCount}개의 전체 평균: ${(likerAvgAll/likerCount).toFixed(2)}점`);
+    headers.forEach(h=>{
+      const r=analysisResult[h];
+      if(r.type==='category'&&r.freq&&r.freq.length){
+        const top=r.freq[0],pct=Math.round(top[1]/r.filled*100);
+        if(pct>=40) conclusions.push(`"${h}": 최다 응답 "${top[0]}" (${pct}%)`);
+      }
+    });
+    const lowResp=headers.filter(h=>Math.round(analysisResult[h].filled/analysisResult[h].total*100)<80);
+    if(lowResp.length) conclusions.push(`응답률 주의 항목 (80% 미만): ${lowResp.slice(0,3).join(', ')}`);
+    if(!conclusions.length) conclusions.push(`총 ${totalResp}명 응답, ${totalCols}개 항목 분석 정상 완료`);
+
+    const bulletItems=conclusions.slice(0,6).map((c,i)=>({
+      text:c,
+      options:{bullet:true,breakLine:i<conclusions.length-1,fontSize:13,color:'CADCFC',fontFace:'Calibri'}
+    }));
+    sl.addText(bulletItems,{x:1.0,y:1.6,w:8.0,h:3.2});
+    sl.addText(`분석일: ${today}  |  총 응답: ${totalResp}명  |  항목: ${totalCols}개`,{x:0.5,y:5.1,w:9,h:0.35,fontSize:10,color:'7A9CC8',fontFace:'Calibri',align:'center'});
+  }
+
+  // 저장
+  await pres.writeFile({fileName:`설문분석보고서_${new Date().toISOString().slice(0,10)}.pptx`});
+}
+
+// ── 초기화 ──
+function resetAll(){
+  rawData=[];headers=[];colTypes=[];analysisResult={};
+  chartInstances.forEach(c=>{try{c.destroy()}catch(e){}});
+  chartInstances=[];
+  document.getElementById('resultArea').style.display='none';
+  document.getElementById('fileInfo').textContent='';
+  document.getElementById('fileInput').value='';
+  document.getElementById('progF').style.width='0%';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+
+
+</body></html>
